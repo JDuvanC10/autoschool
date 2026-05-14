@@ -19,12 +19,20 @@ export const studentsService = {
     const formData = new FormData();
 
     // TODO(actividad): Agregar el archivo en FormData con la clave correcta
-    // Ejemplo esperado: formData.append('profile_picture', file)
+    formData.append('profile_picture', file);
 
-    // TODO(actividad): Consumir el action endpoint del backend
-    // Endpoint esperado: /students/:id/upload-picture/
-    // Debes enviar multipart/form-data y retornar response.data
+        // Consumir endpoint del backend
+    const response = await api.post(
+      `/students/${studentId}/upload-picture/`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
 
-    throw new Error('TODO_ACTIVIDAD: Implementa uploadPicture en students.service.js');
+    return response.data;
   },
 };
+
