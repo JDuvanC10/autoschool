@@ -19,39 +19,41 @@ class StudentViewSet(viewsets.ModelViewSet):
     def upload_picture(self, request, pk=None):
         student = self.get_object()
 
-        # TODO(actividad): Validar que exista `profile_picture` en request.FILES.
-        # TODO(actividad): Validar tipo/tamano basico del archivo antes de guardar.
-        # TODO(actividad): Usar StudentPictureSerializer para persistir la imagen.
-        # TODO(actividad): Retornar StudentSerializer(student, context={"request": request}).data
-        #                  cuando la subida sea exitosa.
-
         incoming_file = request.FILES.get('profile_picture')
         if not incoming_file:
             return Response(
-                {'detail': 'Debes enviar el archivo profile_picture.'},
+                {'detail': 'Debes enviar el archivo en el campo "profile_picture".'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        return Response(
-            {
-                'detail': (
-                    'TODO_ACTIVIDAD: completa la logica de guardado en '
-                    'academy.views.StudentViewSet.upload_picture'
-                )
-            },
-            status=status.HTTP_501_NOT_IMPLEMENTED,
-        )
+        serializer = StudentPictureSerializer(student, data=request.data)
+        
+        if serializer.is_valid():
+            serializer.save() 
+
+            return Response(
+                StudentSerializer(student, context={"request": request}).data,
+                status=status.HTTP_200_OK
+            )
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class InstructorViewSet(viewsets.ModelViewSet):
-    pass
+    queryset = Instructor.objects.all()
+    serializer_class = InstructorSerializer
 
 class VehicleViewSet(viewsets.ModelViewSet):
-    pass
+    queryset = Vehicle.objects.all()
+    serializer_class = VehicleSerializer
 
 class CourseViewSet(viewsets.ModelViewSet):
-    pass
+    queryset = Course.objects.all()
+    serializer_class = CourseSerializer
+
 class EnrollmentViewSet(viewsets.ModelViewSet):
-    pass
+    queryset = Enrollment.objects.all()
+    serializer_class = EnrollmentSerializer
 
 class LessonViewSet(viewsets.ModelViewSet):
-    pass
+    queryset = Lesson.objects.all()
+    serializer_class = LessonSerializer
