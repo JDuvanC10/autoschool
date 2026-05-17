@@ -89,31 +89,48 @@ export function UploadPictureModal({ student, onClose, onSuccess }) {
   };
 
   const capturePhoto = () => {
-    // TODO(actividad): Completar captura desde webcam y convertir canvas -> File.
-    // Pista: usa canvas.toBlob y crea un File para reutilizar el mismo flujo de subida.
-    if (!videoRef.current) return;
-    const video = videoRef.current;
-    if (!video.videoWidth || !video.videoHeight) return;
+  if (!videoRef.current) return;
 
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const context = canvas.getContext("2d");
-    if (!context) return;
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const video = videoRef.current;
 
-    canvas.toBlob((blob) => {
-      if (!blob) return;
+  if (!video.videoWidth || !video.videoHeight) return;
 
-      // TODO(actividad): construir el archivo capturado y actualizar estados.
-      // const file = new File([blob], "camera-capture.jpg", { type: "image/jpeg" });
-      // setUploadFile(file);
-      // setUploadPreview(URL.createObjectURL(file));
+  const canvas = document.createElement("canvas");
 
-      setUploadError("TODO: completar guardado de captura desde webcam.");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  const context = canvas.getContext("2d");
+
+  if (!context) return;
+
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  canvas.toBlob(
+    (blob) => {
+      if (!blob) {
+        setUploadError("No se pudo capturar la imagen.");
+        return;
+      }
+
+      const file = new File(
+        [blob],
+        `camera-capture-${Date.now()}.jpg`,
+        {
+          type: "image/jpeg",
+        }
+      );
+
+      setUploadFile(file);
+      setUploadPreview(URL.createObjectURL(file));
+      setUploadError("");
+
       stopCamera();
-    }, "image/jpeg", 0.9);
-  };
+    },
+    "image/jpeg",
+    0.9
+  );
+};
 
   const handleClose = () => {
     stopCamera();
@@ -121,35 +138,67 @@ export function UploadPictureModal({ student, onClose, onSuccess }) {
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const file = e.target.files[0];
 
-    // TODO(actividad): agregar validaciones basicas (tipo y tamano maximo).
-    // Ejemplos sugeridos: image/jpeg, image/png y un limite de 2MB.
+  if (!file) return;
 
-    setUploadFile(file);
-    setUploadPreview(URL.createObjectURL(file));
-  };
+  const allowedTypes = ["image/jpeg", "image/png"];
+  const maxSize = 2 * 1024 * 1024;
 
-  const handleSubmit = async () => {
-    if (!uploadFile) return;
-    try {
-      setIsUploading(true);
-      setUploadError("");
+  if (!allowedTypes.includes(file.type)) {
+    setUploadError("Solo se permiten imágenes JPG o PNG.");
+    return;
+  }
 
-      // TODO(actividad): mejorar manejo de estado y errores durante el submit.
-      // Debe consumir studentsService.uploadPicture y cerrar modal en exito.
-      const updated = await studentsService.uploadPicture(student.id, uploadFile);
-      onSuccess(updated);
-      handleClose();
-    } catch (err) {
-      setUploadError(
-        err?.message || "Error al subir la imagen. Completa la implementacion pendiente."
-      );
-    } finally {
-      setIsUploading(false);
+  if (file.size > maxSize) {
+    setUploadError("La imagen no puede superar 2MB.");
+    return;
+  }
+
+  setUploadError("");
+  setUploadFile(file);
+  setUploadPreview(URL.createObjectURL(file));
+};
+
+
+ const handleSubmit = async () => {
+  if (!uploadFile) {
+    setUploadError("Debes seleccionar o capturar una imagen.");
+    return;
+  }
+
+  if (isUploading) return;
+
+  try {
+    setIsUploading(true);
+    setUploadError("");
+
+    const updatedStudent = await studentsService.uploadPicture(
+      student.id,
+      uploadFile
+    );
+
+    if (!updatedStudent) {
+      throw new Error("No se recibió respuesta del servidor.");
     }
-  };
+
+    onSuccess(updatedStudent);
+    handleClose();
+
+  } catch (err) {
+    console.error(err);
+
+    setUploadError(
+      err?.response?.data?.detail ||
+      err?.response?.data?.message ||
+      err?.message ||
+      "Error al subir la imagen."
+    );
+
+  } finally {
+    setIsUploading(false);
+  }
+};
 
   return (
     <Dialog open={!!student} onOpenChange={(open) => { if (!open) handleClose(); }}>
